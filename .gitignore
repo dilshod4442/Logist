@@ -5,3 +5,10 @@ db.sqlite3
 .env
 media/
 staticfiles/
+
+# Local secrets and database
+.env
+db.sqlite3
+backups/
+media/
+

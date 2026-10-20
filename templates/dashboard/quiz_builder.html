@@ -1,0 +1,208 @@
+{% extends 'base.html' %}{% load ui %}
+{% block title %}{% if quiz %}{% ui "edit_test" %}{% else %}{% ui "create_test" %}{% endif %} — LogiLearn{% endblock %}
+{% block content %}
+<section class="form-page">
+  <form method="post" class="content-form" id="quiz-builder-form">
+    {% csrf_token %}
+    <p class="eyebrow">{% ui "form_dashboard" %}</p>
+    <h1>{% if quiz %}{% ui "edit_test" %}{% else %}{% ui "create_test" %}{% endif %}</h1>
+
+    {% if form.non_field_errors %}
+    <div class="messages">
+      {% for error in form.non_field_errors %}
+        <div class="message error">{{ error }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Quiz settings -->
+    <fieldset>
+      <legend>{% ui "test_settings" %}</legend>
+      {% for field in form %}
+        <label>
+          {{ field.label }}
+          {{ field }}
+          {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+          {% for error in field.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </label>
+      {% endfor %}
+    </fieldset>
+
+    <!-- Question builder -->
+    <fieldset id="questions-section">
+      <legend>{% ui "questions" %}</legend>
+      <input type="hidden" name="question-count" id="question-count" value="{{ builder_data|length }}">
+
+      <div id="questions-list">
+        {% for q in builder_data %}
+        <div class="question-block" data-question-index="{{ forloop.counter0 }}" style="border:1px solid var(--color-border,#ddd);border-radius:8px;padding:1rem;margin-bottom:1rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+            <strong>{% ui "question" %} {{ forloop.counter }}</strong>
+            <button type="button" class="button ghost small" onclick="removeQuestion({{ forloop.counter0 }})">{% ui "remove" %}</button>
+          </div>
+          <label>
+            {% ui "question" %}
+            <textarea name="questions-{{ forloop.counter0 }}-text" rows="3" required>{{ q.text }}</textarea>
+          </label>
+          <label>
+            Пояснение (показывается после ответа)
+            <textarea name="questions-{{ forloop.counter0 }}-explanation" rows="2">{{ q.explanation }}</textarea>
+          </label>
+          <p><strong>{% ui "answer_options" %}</strong></p>
+          <input type="hidden" name="questions-{{ forloop.counter0 }}-choice-count" class="choice-count" value="{{ q.choices|length }}">
+          <div class="choices-list">
+            {% for choice in q.choices %}
+            <div class="choice-row" style="display:flex;gap:.5rem;align-items:center;margin-bottom:.25rem;">
+              <input type="radio" name="questions-{{ forloop.parentloop.counter0 }}-correct" value="{{ forloop.counter0 }}" {% if q.correct == forloop.counter0|stringformat:"s" %}checked{% endif %} title="{% ui 'correct_answer' %}">
+              <input type="text" name="questions-{{ forloop.parentloop.counter0 }}-choice-{{ forloop.counter0 }}" value="{{ choice }}" placeholder="{% ui 'answer_options' %} {{ forloop.counter }}" style="flex:1;">
+              <button type="button" class="button ghost small" onclick="removeChoice(this)">✕</button>
+            </div>
+            {% endfor %}
+            {% if not q.choices %}
+            <div class="choice-row" style="display:flex;gap:.5rem;align-items:center;margin-bottom:.25rem;">
+              <input type="radio" name="questions-{{ forloop.counter0 }}-correct" value="0" title="{% ui 'correct_answer' %}">
+              <input type="text" name="questions-{{ forloop.counter0 }}-choice-0" placeholder="{% ui 'answer_options' %} 1" style="flex:1;">
+              <button type="button" class="button ghost small" onclick="removeChoice(this)">✕</button>
+            </div>
+            <div class="choice-row" style="display:flex;gap:.5rem;align-items:center;margin-bottom:.25rem;">
+              <input type="radio" name="questions-{{ forloop.counter0 }}-correct" value="1" title="{% ui 'correct_answer' %}">
+              <input type="text" name="questions-{{ forloop.counter0 }}-choice-1" placeholder="{% ui 'answer_options' %} 2" style="flex:1;">
+              <button type="button" class="button ghost small" onclick="removeChoice(this)">✕</button>
+            </div>
+            {% endif %}
+          </div>
+          <button type="button" class="button ghost small" style="margin-top:.5rem;" onclick="addChoice(this)">+ {% ui "add_answer" %}</button>
+          <p style="margin-top:.5rem;font-size:.85em;color:var(--color-muted)">
+            <em>Отметьте ● напротив правильного ответа</em>
+          </p>
+        </div>
+        {% empty %}
+        <!-- placeholder when no questions yet -->
+        {% endfor %}
+      </div>
+
+      <button type="button" class="button ghost" style="margin-top:1rem;" onclick="addQuestion()">+ {% ui "add_question" %}</button>
+    </fieldset>
+
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem;">
+      <button class="button">{% ui "save_test" %}</button>
+      <a href="{% url 'dashboard-quizzes' %}" class="button ghost" data-spa>{% ui "cancel" %}</a>
+    </div>
+  </form>
+</section>
+
+<script>
+// ──────────────────────────────────────────────────────────
+// Quiz Builder — vanilla JS, no dependencies
+// ──────────────────────────────────────────────────────────
+function getQuestionCount() {
+  return parseInt(document.getElementById('question-count').value, 10) || 0;
+}
+function setQuestionCount(n) {
+  document.getElementById('question-count').value = n;
+}
+
+function addQuestion() {
+  const list = document.getElementById('questions-list');
+  const idx = getQuestionCount();
+  setQuestionCount(idx + 1);
+
+  const block = document.createElement('div');
+  block.className = 'question-block';
+  block.dataset.questionIndex = idx;
+  block.style.cssText = 'border:1px solid var(--color-border,#ddd);border-radius:8px;padding:1rem;margin-bottom:1rem;';
+  block.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+      <strong>{% ui "question" %} ${idx + 1}</strong>
+      <button type="button" class="button ghost small" onclick="removeQuestion(${idx})">{% ui "remove" %}</button>
+    </div>
+    <label>{% ui "question" %}
+      <textarea name="questions-${idx}-text" rows="3" required></textarea>
+    </label>
+    <label>Пояснение (показывается после ответа)
+      <textarea name="questions-${idx}-explanation" rows="2"></textarea>
+    </label>
+    <p><strong>{% ui "answer_options" %}</strong></p>
+    <input type="hidden" name="questions-${idx}-choice-count" class="choice-count" value="2">
+    <div class="choices-list">
+      <div class="choice-row" style="display:flex;gap:.5rem;align-items:center;margin-bottom:.25rem;">
+        <input type="radio" name="questions-${idx}-correct" value="0" title="{% ui 'correct_answer' %}">
+        <input type="text" name="questions-${idx}-choice-0" placeholder="{% ui 'answer_options' %} 1" style="flex:1;">
+        <button type="button" class="button ghost small" onclick="removeChoice(this)">✕</button>
+      </div>
+      <div class="choice-row" style="display:flex;gap:.5rem;align-items:center;margin-bottom:.25rem;">
+        <input type="radio" name="questions-${idx}-correct" value="1" title="{% ui 'correct_answer' %}">
+        <input type="text" name="questions-${idx}-choice-1" placeholder="{% ui 'answer_options' %} 2" style="flex:1;">
+        <button type="button" class="button ghost small" onclick="removeChoice(this)">✕</button>
+      </div>
+    </div>
+    <button type="button" class="button ghost small" style="margin-top:.5rem;" onclick="addChoice(this)">+ {% ui "add_answer" %}</button>
+    <p style="margin-top:.5rem;font-size:.85em;color:var(--color-muted)"><em>Отметьте ● напротив правильного ответа</em></p>
+  `;
+  list.appendChild(block);
+}
+
+function removeQuestion(idx) {
+  const block = document.querySelector(`[data-question-index="${idx}"]`);
+  if (block) {
+    block.remove();
+    // Recalculate count
+    const remaining = document.querySelectorAll('.question-block');
+    setQuestionCount(remaining.length);
+    // Renumber
+    remaining.forEach((b, i) => {
+      b.dataset.questionIndex = i;
+      b.querySelectorAll('textarea, input').forEach(el => {
+        el.name = el.name.replace(/questions-\d+/, `questions-${i}`);
+      });
+      b.querySelectorAll('button[onclick^="removeQuestion"]').forEach(btn => {
+        btn.setAttribute('onclick', `removeQuestion(${i})`);
+      });
+      const heading = b.querySelector('strong');
+      if (heading) heading.textContent = `{% ui "question" %} ${i + 1}`;
+    });
+  }
+}
+
+function addChoice(btn) {
+  const block = btn.closest('.question-block');
+  const idx = block.dataset.questionIndex;
+  const choicesDiv = block.querySelector('.choices-list');
+  const countInput = block.querySelector('.choice-count');
+  const choiceIdx = parseInt(countInput.value, 10);
+  countInput.value = choiceIdx + 1;
+
+  const row = document.createElement('div');
+  row.className = 'choice-row';
+  row.style.cssText = 'display:flex;gap:.5rem;align-items:center;margin-bottom:.25rem;';
+  row.innerHTML = `
+    <input type="radio" name="questions-${idx}-correct" value="${choiceIdx}" title="{% ui 'correct_answer' %}">
+    <input type="text" name="questions-${idx}-choice-${choiceIdx}" placeholder="{% ui 'answer_options' %} ${choiceIdx + 1}" style="flex:1;">
+    <button type="button" class="button ghost small" onclick="removeChoice(this)">✕</button>
+  `;
+  choicesDiv.appendChild(row);
+}
+
+function removeChoice(btn) {
+  const row = btn.closest('.choice-row');
+  const block = row.closest('.question-block');
+  const choicesDiv = block.querySelector('.choices-list');
+  if (choicesDiv.querySelectorAll('.choice-row').length <= 2) {
+    alert('Минимум два варианта ответа.');
+    return;
+  }
+  row.remove();
+  // Renumber remaining choices
+  const idx = block.dataset.questionIndex;
+  const rows = choicesDiv.querySelectorAll('.choice-row');
+  const countInput = block.querySelector('.choice-count');
+  countInput.value = rows.length;
+  rows.forEach((r, i) => {
+    const radio = r.querySelector('input[type=radio]');
+    const text = r.querySelector('input[type=text]');
+    if (radio) radio.value = i;
+    if (text) text.name = `questions-${idx}-choice-${i}`;
+  });
+}
+</script>
+{% endblock %}
