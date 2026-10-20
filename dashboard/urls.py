@@ -1,0 +1,3 @@
+from django.urls import path
+from . import views
+urlpatterns = [path("", views.overview, name="dashboard-overview"), path("topics/", views.topic_manage, name="dashboard-topics"), path("topics/new/", views.topic_edit, name="dashboard-topic-new"), path("topics/<int:pk>/edit/", views.topic_edit, name="dashboard-topic-edit"), path("topics/<int:pk>/delete/", views.topic_delete, name="dashboard-topic-delete"), path("materials/upload/", views.material_upload, name="dashboard-material-upload"), path("tests/", views.quiz_manage, name="dashboard-quizzes"), path("tests/new/", views.quiz_edit, name="dashboard-quiz-new"), path("tests/<int:pk>/edit/", views.quiz_edit, name="dashboard-quiz-edit")]

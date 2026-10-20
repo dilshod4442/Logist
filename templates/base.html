@@ -1,0 +1,30 @@
+{% load static i18n ui %}
+{% get_current_language as LANGUAGE_CODE %}
+<!doctype html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LogiLearn">
+  <title>{% block title %}LogiLearn{% endblock %}</title>
+  <script>const themeCookie=document.cookie.split('; ').find(row=>row.startsWith('logilearn_theme='))?.split('=')[1];document.documentElement.dataset.theme=themeCookie||localStorage.getItem('logilearn-theme')||'light';</script>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}"><link rel="stylesheet" href="{% static 'css/preferences.css' %}"><script defer src="{% static 'js/app.js' %}"></script>
+</head>
+<body>
+<a class="skip" href="#content">{% ui "skip_to_content" %}</a>
+<header class="header">
+  <a class="brand" href="{% url 'home' %}" data-spa aria-label="LogiLearn {% ui "home" %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h11v10H3zM14 10h4l3 3v4h-7zM7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4m10 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/></svg>LogiLearn</a>
+  <button class="nav-toggle" aria-label="{% ui "open_menu" %}" aria-expanded="false">☰</button>
+  <nav class="nav" aria-label="{% ui "main_navigation" %}">
+    <a href="{% url 'home' %}" data-spa>{% ui "home" %}</a><a href="{% url 'topic-list' %}" data-spa>{% ui "topics" %}</a><a href="{% url 'lectures' %}" data-spa>{% ui "lectures" %}</a><a href="{% url 'practice' %}" data-spa>{% ui "practice" %}</a><a href="{% url 'material-list' %}" data-spa>{% ui "materials" %}</a><a href="{% url 'quiz-list' %}" data-spa>{% ui "tests" %}</a><a href="{% url 'glossary' %}" data-spa>{% ui "glossary" %}</a>{% if user|can_view_dashboard %}<a href="{% url 'dashboard-overview' %}" data-spa>{% ui "dashboard" %}</a>{% endif %}
+  </nav>
+  <div class="utility-controls">
+    <form class="language-form" action="{% url 'set_language' %}" method="post">{% csrf_token %}<input name="next" type="hidden" value="{{ request.get_full_path }}"><label class="sr-only" for="language-select">{% ui "language" %}</label><select id="language-select" name="language" onchange="this.form.submit()"><option value="uz" {% if LANGUAGE_CODE == "uz" %}selected{% endif %}>UZ</option><option value="ru" {% if LANGUAGE_CODE == "ru" %}selected{% endif %}>RU</option><option value="en" {% if LANGUAGE_CODE == "en" %}selected{% endif %}>EN</option></select></form>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="{% ui "switch_theme" %}" title="{% ui "switch_theme" %}"><span aria-hidden="true">◐</span></button>
+    <div class="auth">{% if user.is_authenticated %}<span>{{ user.username }}</span><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link-button">{% ui "sign_out" %}</button></form>{% else %}<a class="button small" href="{% url 'login' %}">{% ui "sign_in" %}</a>{% endif %}</div>
+    </div>
+</header>
+{% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+<main id="content" tabindex="-1">{% block content %}{% endblock %}</main>
+<footer><div><strong>LogiLearn</strong><p>{% ui "site_tagline" %}</p></div><a href="{% url 'about' %}" data-spa>{% ui "about" %}</a></footer>
+<section class="cookie-notice" data-cookie-notice hidden role="dialog" aria-label="{% ui 'cookie_title' %}" data-title="{% ui 'cookie_title' %}" data-copy="{% ui 'cookie_copy' %}" data-accept="{% ui 'accept' %}" data-reject="{% ui 'reject_optional' %}"><p><strong data-cookie-title></strong> <span data-cookie-copy></span></p><div><button type="button" class="button small" data-cookie-accept></button><button type="button" class="button ghost small" data-cookie-reject></button></div></section>
+</body></html>
