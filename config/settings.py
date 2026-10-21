@@ -16,12 +16,21 @@ ALLOWED_HOSTS = [
 ]
 
 ALLOWED_HOSTS = [
-    "logist-production-79ef.up.railway.app",
-    "localhost",
-    "127.0.0.1",
+    host.strip()
+    for host in os.environ.get(
+        "DJANGO_ALLOWED_HOSTS",
+        "logist-production-79ef.up.railway.app,localhost,127.0.0.1"
+    ).split(",")
+    if host.strip()
 ]
+
 CSRF_TRUSTED_ORIGINS = [
-    "https://logist-production-79ef.up.railway.app",
+    origin.strip()
+    for origin in os.environ.get(
+        "CSRF_TRUSTED_ORIGINS",
+        "https://logist-production-79ef.up.railway.app"
+    ).split(",")
+    if origin.strip()
 ]
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -159,6 +168,8 @@ SECURE_REFERRER_POLICY = "same-origin"
 _csrf_origins = os.environ.get("CSRF_TRUSTED_ORIGINS", "")
 if _csrf_origins:
     CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(",") if o.strip()]
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
